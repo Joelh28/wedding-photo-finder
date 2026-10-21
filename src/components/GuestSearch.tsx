@@ -120,8 +120,8 @@ export function GuestSearch({
           <div>
             <strong>AI search is not available</strong>
             The server has no AI provider configured, so searching is disabled (we never
-            fabricate results). See the README to add an API key securely. The Photographer
-            Studio and Full Album still work fully.
+            fabricate results). Set up an API key (e.g. GEMINI_API_KEY or AI_API_KEY) to enable
+            AI-powered visual attribute search. The Photographer Studio and Full Album still work fully.
           </div>
         </div>
       )}

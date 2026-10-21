@@ -46,10 +46,12 @@ export default function App() {
     setPhotos(await db.getAllPhotos());
   }, []);
 
+  const [confirmClear, setConfirmClear] = useState(false);
+
   const clearAll = useCallback(async () => {
-    if (!confirm("Remove all photos from this browser? This cannot be undone.")) return;
     await db.clearAll();
     setPhotos([]);
+    setConfirmClear(false);
   }, []);
 
   const onAttributesComputed = useCallback(
@@ -99,9 +101,7 @@ export default function App() {
           <span>⚠️</span>
           <div>
             <strong>AI provider not configured</strong>
-            Upload and album browsing work now. To enable AI search, add an API key to{" "}
-            <code>server/.env</code> (see README) and restart the server. No results are ever
-            fabricated.
+            Upload and album browsing work now. To enable AI search, configure an API key (e.g. <code>GEMINI_API_KEY</code> or <code>AI_API_KEY</code>) in the environment. No results are ever fabricated.
           </div>
         </div>
       )}
@@ -132,7 +132,7 @@ export default function App() {
           photos={photos}
           onAdd={addPhotos}
           onDelete={deletePhoto}
-          onClear={clearAll}
+          onClear={() => setConfirmClear(true)}
           onPreview={setPreview}
         />
       )}
@@ -145,6 +145,25 @@ export default function App() {
         />
       )}
       {tab === "album" && <FullAlbum photos={photos} onPreview={setPreview} />}
+
+      {confirmClear && (
+        <div className="lightbox" role="dialog" aria-modal="true" onClick={() => setConfirmClear(false)}>
+          <div className="card" style={{ maxWidth: 420, width: "90%", margin: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 10px" }}>Clear Entire Album?</h3>
+            <p style={{ color: "var(--muted)", margin: "0 0 18px", fontSize: 14 }}>
+              Remove all photos from this browser? This action cannot be undone.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button className="btn ghost small" onClick={() => setConfirmClear(false)}>
+                Cancel
+              </button>
+              <button className="btn small" onClick={() => void clearAll()}>
+                Yes, Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Lightbox photo={preview} onClose={() => setPreview(null)} />
 

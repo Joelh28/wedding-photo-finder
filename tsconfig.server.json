@@ -12,5 +12,5 @@
     "noEmit": true,
     "strict": true
   },
-  "include": ["server"]
+  "include": ["server", "server.ts"]
 }

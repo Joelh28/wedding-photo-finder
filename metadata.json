@@ -1,0 +1,9 @@
+{
+  "name": "Wedding Photo Finder",
+  "description": "Find wedding moments by visual attributes (clothing, colors, scenery) without facial recognition.",
+  "requestFeedback": false,
+  "userFacing": true,
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

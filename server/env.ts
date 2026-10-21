@@ -3,27 +3,39 @@ import "dotenv/config";
 /**
  * Central place that reads AI configuration from the server environment.
  *
- * SECURITY: the API key is read here, on the server, only. It is never sent to
- * the browser. The client learns *whether* AI is configured via /api/health,
- * but never receives the key itself.
+ * Supports both Gemini (standard in AI Studio Build) and OpenAI/compatible
+ * vision endpoints.
  */
 export interface AiConfig {
+  provider: "gemini" | "openai";
   apiKey: string;
-  baseUrl: string;
+  baseUrl?: string;
   model: string;
 }
 
 export function getAiConfig(): AiConfig | null {
-  const apiKey = process.env.AI_API_KEY?.trim();
-  if (!apiKey) return null;
+  // Check Gemini first (provided by AI Studio Build or user .env)
+  const geminiKey = process.env.GEMINI_API_KEY?.trim();
+  if (geminiKey) {
+    return {
+      provider: "gemini",
+      apiKey: geminiKey,
+      model: process.env.GEMINI_MODEL?.trim() || "gemini-3.8-flash",
+    };
+  }
 
-  return {
-    apiKey,
-    // Defaults target OpenAI. Override AI_BASE_URL / AI_MODEL to use any
-    // OpenAI-compatible vision endpoint (e.g. a local gateway, Azure, etc.).
-    baseUrl: (process.env.AI_BASE_URL?.trim() || "https://api.openai.com/v1").replace(/\/$/, ""),
-    model: process.env.AI_MODEL?.trim() || "gpt-4o-mini",
-  };
+  // Fallback to OpenAI / compatible endpoint if AI_API_KEY is provided
+  const apiKey = process.env.AI_API_KEY?.trim() || process.env.OPENAI_API_KEY?.trim();
+  if (apiKey) {
+    return {
+      provider: "openai",
+      apiKey,
+      baseUrl: (process.env.AI_BASE_URL?.trim() || "https://api.openai.com/v1").replace(/\/$/, ""),
+      model: process.env.AI_MODEL?.trim() || "gpt-4o-mini",
+    };
+  }
+
+  return null;
 }
 
-export const PORT = Number(process.env.PORT) || 8787;
+export const PORT = Number(process.env.PORT) || 3000;

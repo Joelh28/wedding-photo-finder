@@ -1,3 +1,4 @@
+import { GoogleGenAI } from "@google/genai";
 import type { AiConfig } from "./env.ts";
 
 /**
@@ -35,7 +36,7 @@ const SYSTEM_PROMPT = [
   "individuals. Do NOT describe biometric facial features or infer identity, age,",
   "ethnicity, or any protected attribute. Treat people only as wearers of",
   "clothing and holders of objects.",
-  "Always respond with a single JSON object and nothing else.",
+  "Always respond with a single valid JSON object and nothing else.",
 ].join(" ");
 
 interface ChatMessageContent {
@@ -44,7 +45,29 @@ interface ChatMessageContent {
   image_url?: { url: string };
 }
 
-async function callVision(
+function parseDataUrl(dataUrl: string): { mimeType: string; data: string } {
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) {
+    throw new Error("Invalid image data URL format");
+  }
+  return {
+    mimeType: match[1],
+    data: match[2],
+  };
+}
+
+function getGeminiClient(apiKey: string): GoogleGenAI {
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: {
+      headers: {
+        "User-Agent": "aistudio-build",
+      },
+    },
+  });
+}
+
+async function callOpenAiVision(
   cfg: AiConfig,
   userContent: ChatMessageContent[],
 ): Promise<string> {
@@ -81,7 +104,7 @@ async function callVision(
 function safeParse<T>(raw: string, fallback: T): T {
   try {
     // Some providers wrap JSON in code fences; strip them defensively.
-    const cleaned = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "");
+    const cleaned = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
     return JSON.parse(cleaned) as T;
   } catch {
     return fallback;
@@ -122,11 +145,31 @@ export async function analyzePhoto(
     '"sceneType" (short label e.g. "outdoor ceremony", "reception dinner").',
   ].join(" ");
 
-  const raw = await callVision(cfg, [
-    { type: "text", text: instruction },
-    { type: "image_url", image_url: { url: imageDataUrl } },
-  ]);
-  return normalizeAttributes(safeParse<Record<string, unknown>>(raw, {}));
+  if (cfg.provider === "gemini") {
+    const ai = getGeminiClient(cfg.apiKey);
+    const { mimeType, data } = parseDataUrl(imageDataUrl);
+    const response = await ai.models.generateContent({
+      model: cfg.model,
+      contents: {
+        parts: [
+          { inlineData: { mimeType, data } },
+          { text: instruction },
+        ],
+      },
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+        responseMimeType: "application/json",
+      },
+    });
+    const raw = response.text ?? "{}";
+    return normalizeAttributes(safeParse<Record<string, unknown>>(raw, {}));
+  } else {
+    const raw = await callOpenAiVision(cfg, [
+      { type: "text", text: instruction },
+      { type: "image_url", image_url: { url: imageDataUrl } },
+    ]);
+    return normalizeAttributes(safeParse<Record<string, unknown>>(raw, {}));
+  }
 }
 
 export interface RankedMatch {
@@ -160,9 +203,24 @@ export async function rankByText(
     `PHOTOS: ${JSON.stringify(catalog)}`,
   ].join(" ");
 
-  const raw = await callVision(cfg, [{ type: "text", text: instruction }]);
-  const parsed = safeParse<{ matches?: unknown }>(raw, { matches: [] });
-  return normalizeMatches(parsed.matches);
+  if (cfg.provider === "gemini") {
+    const ai = getGeminiClient(cfg.apiKey);
+    const response = await ai.models.generateContent({
+      model: cfg.model,
+      contents: instruction,
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+        responseMimeType: "application/json",
+      },
+    });
+    const raw = response.text ?? "{}";
+    const parsed = safeParse<{ matches?: unknown }>(raw, { matches: [] });
+    return normalizeMatches(parsed.matches);
+  } else {
+    const raw = await callOpenAiVision(cfg, [{ type: "text", text: instruction }]);
+    const parsed = safeParse<{ matches?: unknown }>(raw, { matches: [] });
+    return normalizeMatches(parsed.matches);
+  }
 }
 
 /**
@@ -192,9 +250,24 @@ export async function rankByReference(
     `PHOTOS: ${JSON.stringify(catalog)}`,
   ].join(" ");
 
-  const raw = await callVision(cfg, [{ type: "text", text: instruction }]);
-  const parsed = safeParse<{ matches?: unknown }>(raw, { matches: [] });
-  return { referenceAttributes, matches: normalizeMatches(parsed.matches) };
+  if (cfg.provider === "gemini") {
+    const ai = getGeminiClient(cfg.apiKey);
+    const response = await ai.models.generateContent({
+      model: cfg.model,
+      contents: instruction,
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+        responseMimeType: "application/json",
+      },
+    });
+    const raw = response.text ?? "{}";
+    const parsed = safeParse<{ matches?: unknown }>(raw, { matches: [] });
+    return { referenceAttributes, matches: normalizeMatches(parsed.matches) };
+  } else {
+    const raw = await callOpenAiVision(cfg, [{ type: "text", text: instruction }]);
+    const parsed = safeParse<{ matches?: unknown }>(raw, { matches: [] });
+    return { referenceAttributes, matches: normalizeMatches(parsed.matches) };
+  }
 }
 
 function normalizeMatches(value: unknown): RankedMatch[] {
