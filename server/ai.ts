@@ -46,13 +46,17 @@ interface ChatMessageContent {
 }
 
 function parseDataUrl(dataUrl: string): { mimeType: string; data: string } {
-  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) {
+  const commaIdx = dataUrl.indexOf(",");
+  if (commaIdx === -1) {
     throw new Error("Invalid image data URL format");
   }
+  const prefix = dataUrl.slice(0, commaIdx);
+  const data = dataUrl.slice(commaIdx + 1);
+  const mimeMatch = prefix.match(/^data:([^;]+)/);
+  const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
   return {
-    mimeType: match[1],
-    data: match[2],
+    mimeType,
+    data,
   };
 }
 
@@ -65,6 +69,51 @@ function getGeminiClient(apiKey: string): GoogleGenAI {
       },
     },
   });
+}
+
+/** Formats errors from Gemini or OpenAI into readable user-facing messages. */
+/** Formats errors from Gemini or OpenAI into readable user-facing messages. */
+export function formatAiError(err: unknown): string {
+  if (err instanceof Error) {
+    try {
+      const parsed = JSON.parse(err.message);
+      if (parsed?.error) {
+        const code = parsed.error.code;
+        const status = parsed.error.status;
+        const msg = parsed.error.message || "";
+
+        if (
+          code === 429 ||
+          status === "RESOURCE_EXHAUSTED" ||
+          msg.toLowerCase().includes("quota") ||
+          msg.includes("RESOURCE_EXHAUSTED")
+        ) {
+          return "Daily API request quota exceeded (HTTP 429). Please wait for your daily quota to reset or configure a dedicated API key.";
+        }
+        if (
+          code === 503 ||
+          status === "UNAVAILABLE" ||
+          msg.toLowerCase().includes("high demand") ||
+          msg.includes("503")
+        ) {
+          return "The Gemini vision service is temporarily unavailable due to high demand (HTTP 503). You can click 'Retry Analysis' to try this photo again.";
+        }
+        return msg;
+      }
+    } catch {
+      // Message is not a JSON string
+    }
+
+    const lower = err.message.toLowerCase();
+    if (lower.includes("429") || lower.includes("resource_exhausted") || lower.includes("quota")) {
+      return "Daily API request quota exceeded (HTTP 429). Please wait for your daily quota to reset or configure a dedicated API key.";
+    }
+    if (lower.includes("503") || lower.includes("unavailable") || lower.includes("high demand")) {
+      return "The Gemini vision service is temporarily unavailable due to high demand (HTTP 503). You can click 'Retry Analysis' to try this photo again.";
+    }
+    return err.message;
+  }
+  return String(err);
 }
 
 async function callOpenAiVision(
@@ -90,7 +139,7 @@ async function callOpenAiVision(
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`AI provider returned ${res.status}: ${body.slice(0, 500)}`);
+    throw new Error(`OpenAI provider returned ${res.status}: ${body.slice(0, 500)}`);
   }
 
   const data = (await res.json()) as {
@@ -103,7 +152,6 @@ async function callOpenAiVision(
 
 function safeParse<T>(raw: string, fallback: T): T {
   try {
-    // Some providers wrap JSON in code fences; strip them defensively.
     const cleaned = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
     return JSON.parse(cleaned) as T;
   } catch {
@@ -148,8 +196,10 @@ export async function analyzePhoto(
   if (cfg.provider === "gemini") {
     const ai = getGeminiClient(cfg.apiKey);
     const { mimeType, data } = parseDataUrl(imageDataUrl);
+
+    // Make single direct vision call using configured vision model (gemini-3.6-flash)
     const response = await ai.models.generateContent({
-      model: cfg.model,
+      model: cfg.visionModel,
       contents: {
         parts: [
           { inlineData: { mimeType, data } },
@@ -205,8 +255,9 @@ export async function rankByText(
 
   if (cfg.provider === "gemini") {
     const ai = getGeminiClient(cfg.apiKey);
+    // Use text-ranking model (gemini-3.1-flash-lite)
     const response = await ai.models.generateContent({
-      model: cfg.model,
+      model: cfg.textModel,
       contents: instruction,
       config: {
         systemInstruction: SYSTEM_PROMPT,
@@ -233,6 +284,7 @@ export async function rankByReference(
   category: string,
   photos: { id: string; attributes: PhotoAttributes }[],
 ): Promise<{ referenceAttributes: PhotoAttributes; matches: RankedMatch[] }> {
+  // 1. Analyze reference image using vision model (gemini-3.6-flash)
   const referenceAttributes = await analyzePhoto(cfg, referenceDataUrl);
   const catalog = photos.map((p) => ({ id: p.id, attributes: p.attributes }));
 
@@ -252,8 +304,9 @@ export async function rankByReference(
 
   if (cfg.provider === "gemini") {
     const ai = getGeminiClient(cfg.apiKey);
+    // 2. Rank catalog against reference using text-ranking model (gemini-3.1-flash-lite)
     const response = await ai.models.generateContent({
-      model: cfg.model,
+      model: cfg.textModel,
       contents: instruction,
       config: {
         systemInstruction: SYSTEM_PROMPT,

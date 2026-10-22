@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import type { PhotoAttributes, RankedMatch, SearchCategory, StoredPhoto } from "../types";
 import { SEARCH_CATEGORIES } from "../types";
 import { analyzePhoto, searchByReference, searchByText } from "../lib/api";
-import { fileToDataUrl, downloadDataUrl } from "../lib/files";
+import { fileToDataUrl, downloadDataUrl, prepareImageForAnalysis } from "../lib/files";
 import { AttributeChips } from "./AttributeChips";
 
 type Mode = "text" | "reference";
@@ -52,7 +52,9 @@ export function GuestSearch({
     for (let i = 0; i < toAnalyze.length; i++) {
       const p = toAnalyze[i];
       setStatus(`Analyzing photo ${i + 1} of ${toAnalyze.length} (one-time per photo)…`);
-      const attributes = await analyzePhoto(p.dataUrl);
+      // Resize to max 1024px JPEG for AI analysis without modifying original in IndexedDB
+      const analysisDataUrl = await prepareImageForAnalysis(p.dataUrl);
+      const attributes = await analyzePhoto(analysisDataUrl);
       onAttributesComputed(p.id, attributes);
       catalog.push({ id: p.id, attributes });
       analyzedCount++;
@@ -77,7 +79,8 @@ export function GuestSearch({
       } else {
         if (!referenceDataUrl) throw new Error("Please upload a reference image.");
         setStatus("Analyzing your reference image and ranking matches…");
-        const res = await searchByReference(referenceDataUrl, category, catalog);
+        const analysisRef = await prepareImageForAnalysis(referenceDataUrl);
+        const res = await searchByReference(analysisRef, category, catalog);
         setReferenceAttributes(res.referenceAttributes);
         matches = res.matches;
       }
@@ -120,8 +123,8 @@ export function GuestSearch({
           <div>
             <strong>AI search is not available</strong>
             The server has no AI provider configured, so searching is disabled (we never
-            fabricate results). Set up an API key (e.g. GEMINI_API_KEY or AI_API_KEY) to enable
-            AI-powered visual attribute search. The Photographer Studio and Full Album still work fully.
+            fabricate results). Ensure <code>GEMINI_API_KEY</code> is available in the environment
+            to enable AI-powered visual attribute search. The Photographer Studio and Full Album still work fully.
           </div>
         </div>
       )}
@@ -223,7 +226,24 @@ export function GuestSearch({
       {error && (
         <div className="banner warn" style={{ marginTop: 14 }}>
           <span>⚠️</span>
-          <div>{error}</div>
+          <div>
+            <div>{error}</div>
+            {(error.includes("503") ||
+              error.toLowerCase().includes("unavailable") ||
+              error.toLowerCase().includes("high demand")) &&
+              !error.includes("429") && (
+                <div style={{ marginTop: 10 }}>
+                  <button
+                    className="btn small"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void runSearch()}
+                  >
+                    🔄 Retry Analysis
+                  </button>
+                </div>
+              )}
+          </div>
         </div>
       )}
 

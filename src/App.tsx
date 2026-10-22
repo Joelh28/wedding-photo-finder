@@ -101,7 +101,7 @@ export default function App() {
           <span>⚠️</span>
           <div>
             <strong>AI provider not configured</strong>
-            Upload and album browsing work now. To enable AI search, configure an API key (e.g. <code>GEMINI_API_KEY</code> or <code>AI_API_KEY</code>) in the environment. No results are ever fabricated.
+            Upload and album browsing work now. To enable AI search, ensure <code>GEMINI_API_KEY</code> is available in the environment (or optionally <code>AI_API_KEY</code> for an OpenAI-compatible endpoint). No results are ever fabricated.
           </div>
         </div>
       )}

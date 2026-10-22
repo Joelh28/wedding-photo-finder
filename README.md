@@ -20,48 +20,40 @@ your AI API key server-side.
 # 1. Install dependencies
 npm install
 
-# 2. (Optional but recommended) configure the AI provider
-cp server/.env.example server/.env
-#    then edit server/.env and set AI_API_KEY=...
+# 2. AI provider configuration
+#    In Google AI Studio, GEMINI_API_KEY is provided automatically.
+#    To use an optional OpenAI-compatible provider instead:
+#    edit .env and set AI_API_KEY=...
 
-# 3. Run the app (starts the Vite frontend + the backend proxy together)
+# 3. Run the app
 npm run dev
 ```
 
-Open the printed Vite URL (default **http://localhost:5173**).
-The backend proxy runs on **http://localhost:8787** and Vite forwards `/api` to it.
+Open the printed server URL (default **http://localhost:3000**).
 
 > You can run the app **without** an API key — upload, gallery, and album browsing
 > all work. AI search is cleanly disabled (with an on-screen notice) until a key
 > is configured. **No fake results are ever generated.**
 
-### Run pieces individually
-```bash
-npm run dev:web      # frontend only
-npm run dev:server   # backend proxy only
-npm run build        # typecheck + production build of the frontend
-npm run typecheck    # typecheck frontend + server
-```
-
 ---
 
 ## Configuring AI securely (where the key lives)
 
-The API key is read **only** by the backend proxy from `server/.env`:
+The API key is read **only** by the server backend proxy:
 
 ```env
-AI_API_KEY=sk-...                      # required to enable AI search
-# AI_BASE_URL=https://api.openai.com/v1  # optional: any OpenAI-compatible vision endpoint
-# AI_MODEL=gpt-4o-mini                   # optional: must be vision-capable
+# Primary: Google Gemini API (standard in Google AI Studio)
+GEMINI_API_KEY=
+
+# Optional fallback: OpenAI-compatible vision endpoint
+# AI_API_KEY=sk-...                      
+# AI_BASE_URL=https://api.openai.com/v1  
+# AI_MODEL=gpt-4o-mini                   
 ```
 
-- `server/.env` is **gitignored** — it is never committed.
-- The key is **never** sent to the browser or bundled into frontend JavaScript.
-- The browser calls our proxy (`/api/...`); the proxy adds the key and calls the
-  vendor. The client only learns *whether* AI is configured via `/api/health`.
-
-Defaults target **OpenAI** (`gpt-4o-mini`), but any OpenAI-compatible vision
-endpoint works by overriding `AI_BASE_URL` / `AI_MODEL`.
+- Keys live server-side only and are **never** exposed to the browser.
+- The browser calls our proxy (`/api/...`); the proxy communicates with the AI provider.
+- In Google AI Studio, `GEMINI_API_KEY` is injected automatically into the server environment.
 
 ---
 
