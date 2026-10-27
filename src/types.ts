@@ -7,6 +7,12 @@ export interface PhotoAttributes {
   sceneType: string;
 }
 
+export interface DetectedFace {
+  id: string;
+  box: { x: number; y: number; width: number; height: number };
+  descriptor: number[]; // 128-dimensional facial geometry vector
+}
+
 export interface StoredPhoto {
   id: string;
   name: string;
@@ -16,6 +22,8 @@ export interface StoredPhoto {
   dataUrl: string;
   /** Cached observable-attribute analysis, if the photo has been analyzed. */
   attributes?: PhotoAttributes;
+  /** Cached facial embeddings if face recognition was performed. */
+  faces?: DetectedFace[];
 }
 
 export type SearchCategory =
@@ -35,4 +43,5 @@ export interface RankedMatch {
   id: string;
   score: number;
   rationale: string;
+  matchType?: "attribute" | "face";
 }

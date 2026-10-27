@@ -62,6 +62,24 @@ export default function App() {
     [],
   );
 
+  const onFacesComputed = useCallback(
+    async (id: string, faces: import("./types").DetectedFace[]) => {
+      await db.setPhotoFaces(id, faces);
+      setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, faces } : p)));
+    },
+    [],
+  );
+
+  const onClearFaces = useCallback(async () => {
+    await db.clearAllFaceData();
+    setPhotos((prev) =>
+      prev.map((p) => {
+        const { faces: _f, ...rest } = p;
+        return rest as StoredPhoto;
+      }),
+    );
+  }, []);
+
   return (
     <div className="app">
       <header className="masthead">
@@ -141,6 +159,8 @@ export default function App() {
           photos={photos}
           aiConfigured={Boolean(aiConfigured)}
           onAttributesComputed={onAttributesComputed}
+          onFacesComputed={onFacesComputed}
+          onClearFaces={onClearFaces}
           onPreview={setPreview}
         />
       )}

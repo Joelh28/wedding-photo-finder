@@ -1,69 +1,94 @@
-# Product Requirements Document (PRD)
+# Product Requirements Document (PRD) — Wedding Photo Finder
 
-## 1. Product Name
-**Wedding Photo Finder**
-
----
-
-## 2. Product Purpose
-Wedding albums often contain hundreds or thousands of photos, making it difficult and time-consuming for guests and couples to locate specific moments, outfits, or settings. 
-
-**Wedding Photo Finder** enables users to discover relevant wedding photos quickly by searching for observable visual details (such as clothing color, attire style, accessories, and venue background) rather than relying on biometric facial recognition or manual browsing. Photos stay stored locally in the user's browser, respecting guest privacy.
+## 1. Product Name & Overview
+**Wedding Photo Finder** is an AI-assisted wedding photo discovery application. It allows couples and guests to explore large wedding albums by searching for observable visual details (clothing, colors, accessories, and settings) using Google Gemini, while keeping full-resolution photos stored privately inside the browser via IndexedDB.
 
 ---
 
-## 3. Target Users
-- **Wedding Guests**: Guests looking for photos of themselves, their partners, their family members, or specific groups without having to comb through hundreds of images manually.
-- **Couples & Hosts**: Newlyweds wanting to curate photos featuring specific elements (e.g., reception centerpieces, specific floral arrangements, bridesmaids in sage dresses).
-- **Wedding Photographers / Event Organizers**: Professionals or hosts who need a lightweight, privacy-conscious gallery tool to showcase albums and help guests retrieve moments of interest.
+## 2. Target Users & Core Value
+- **Wedding Guests**: Quickly locate photos of themselves, their partners, family, or party groups based on what they wore or where they were standing, without manual scanning.
+- **Couples & Photographers**: Curate and share albums with privacy-first, non-biometric visual search that avoids creepy facial profiling while making photo retrieval fast.
 
 ---
 
-## 4. Core Functionality (What the AI Actually Does)
+## 3. Existing Functionality (Phase 1 — Operational)
 
-### 4.1 Observable Visual Attribute Extraction
-When photos are analyzed, the AI vision model scans each image for observable physical traits and context only—strictly avoiding biometric facial recognition, identity matching, or personal profiling:
-- **Clothing & Outfits**: Colors, cuts, and styles of suits, gowns, ties, and apparel (e.g., "navy blue three-piece suit", "blush pink bridesmaid dress").
-- **Objects & Accessories**: Distinct items held or displayed (e.g., champagne flutes, bouquets, sunglasses, floral arch).
-- **Background & Setting**: Scene environment and location cues (e.g., outdoor garden altar, candlelit banquet hall, dance floor).
-- **Dominant Colors & Scene Type**: Primary color palette and event stage (e.g., "outdoor ceremony", "evening reception dinner").
+### 3.1 Album Ingestion & Storage (Photographer Studio)
+- **Local Storage**: Bulk upload images (JPEG, PNG, WebP) directly into IndexedDB.
+- **Privacy First**: Original full-resolution files stay in the user's browser.
+- **Album Management**: View thumbnails, delete individual photos, clear album, and view live photo counts.
+- **Analysis Status Badges**: Displays "AI ✓" for cached photos or "not analyzed" (pending).
 
-### 4.2 Attribute-Based Search & Ranking
-- **Natural Language Text Search**: Evaluates guest text queries against the analyzed photo attributes and scores matches from 0% to 100%.
-- **Reference Image Search**: Accepts a guest-provided photo (such as a selfie or an outfit photo from the event), extracts its visual attributes, and compares them against the album catalog.
-- **Category Filtering**: Allows users to focus the AI matching on specific visual dimensions:
-  - *Outfit & Clothing*
-  - *Objects & Accessories*
-  - *Background & Location*
-  - *Overall Visual Similarity*
-- **Explainable Match Rationale**: Accompanies each ranked result with a human-readable explanation of why the photo matched the query (e.g., "Matched navy blue suit with lapel flower near wooden arbor").
+### 3.2 Multimodal Visual Attribute Extraction (`gemini-3.6-flash`)
+- **Strict Non-Biometric Extraction**: Extracts only observable visual details:
+  - `outfitClothing`: Suits, dresses, ties, colors, styles.
+  - `objectsAccessories`: Champagne glasses, bouquets, sunglasses, jewelry.
+  - `backgroundLocation`: Altar, dance floor, garden, banquet tables.
+  - `colors`: Dominant color palette.
+  - `sceneType`: Ceremony, cocktail hour, reception dinner, dancing.
+- **Client-Side Pre-Processing**: Images are downscaled on HTML5 Canvas to max 1024px JPEG (~150–250KB) before transmission to `/api/analyze`, preserving original files in IndexedDB.
+- **Persistent Caching**: Attributes are saved to IndexedDB; photos are analyzed only once.
+
+### 3.3 Search & Ranking (`gemini-3.1-flash-lite`)
+- **Natural Language Text Search**: Scores photos against queries (0% to 100%) and provides explainable rationales.
+- **Reference Image Search**: Uploads a reference image (e.g., outfit photo), extracts attributes with `gemini-3.6-flash`, and ranks album with `gemini-3.1-flash-lite`.
+- **Search Categories**: Allows focusing relevance on *Outfit & Clothing*, *Objects & Accessories*, *Background & Location*, or *Overall Visual Similarity*.
+- **Full Album & Lightbox**: Interactive gallery with full-resolution photo lightbox and downloads.
+- **Error Resilience**: User-actionable "Retry Analysis" button for transient 503 errors and distinct 429 quota messaging.
 
 ---
 
-## 5. User Flow (Step-by-Step Interaction)
+## 4. Proposed New Functionality (Phase 2)
 
-### Step 1: Album Ingestion (Photographer Studio)
-1. The user navigates to the **Photographer Studio** tab.
-2. The user drags and drops or selects image files (JPG, PNG, WebP) from their computer.
-3. Photos are read and stored directly in the browser's local storage (IndexedDB), with immediate thumbnail previews and a live photo counter.
-4. The user can review thumbnails, click to inspect any photo, or remove individual/all photos.
+### 4.1 Feature 1: Smart Search Filtering
+- **Objective**: Reduce visual clutter and let users quickly surface true matches.
+- **Requirements**:
+  - **Hide 0% Relevance by Default**: Photos with 0% match score are filtered out of the default results view.
+  - **Adjustable Match Threshold Filter**: An interactive slider or numeric control (0% to 100%) enabling users to set a minimum match threshold (e.g., "Only show 40%+ matches").
+  - **Show All Results Toggle**: A quick toggle or button ("Show all X results") allowing users to view the complete catalog including low and 0% matches.
+  - **Result Counter**: Displays live counts (e.g., *"Showing 8 of 24 photos (≥ 30% match)"*).
 
-### Step 2: Defining Search Criteria (Guest Search)
-1. The user switches to the **Guest Search** tab.
-2. The user chooses their search modality:
-   - **Text Description**: Types natural phrases describing what to look for (e.g., *"guest in a navy suit holding a champagne glass near the floral arch"*).
-   - **Reference Image**: Uploads a sample image (e.g., a photo showing their wedding attire).
-3. The user selects a **Search Category** dropdown to guide emphasis (*Outfit & Clothing*, *Objects & Accessories*, *Background & Location*, or *Overall Visual Similarity*).
+### 4.2 Feature 2: Favorites & Batch Download
+- **Objective**: Enable guests to curate their personal collection and download multiple photos in a single action.
+- **Requirements**:
+  - **Photo Favoriting**:
+    - Heart icon toggle (❤️ / 🤍) on photo thumbnails, search result cards, and the lightbox modal.
+    - Persistent favorites state stored in IndexedDB.
+    - Dedicated "Favorites" filter/view to inspect all favorited photos across the album.
+  - **Multi-Photo Selection**:
+    - Checkbox selection on search result cards and album grid.
+    - "Select All Filtered" and "Deselect All" batch controls.
+    - Floating action bar showing count of selected items (e.g., *"4 photos selected"*).
+  - **Batch ZIP Download**:
+    - One-click "Download Selected as ZIP" button.
+    - Packages original full-resolution images from IndexedDB into a single `.zip` archive named `wedding-photos-selection.zip` client-side without backend upload.
 
-### Step 3: Running AI Search & Viewing Results
-1. The user clicks **"Search the album"**.
-2. If photos have not yet been processed, the system analyzes them in the background (caching the attributes locally for all future searches).
-3. The AI scores and ranks the album photos by relevance.
-4. Search results appear sorted from highest to lowest match score, featuring:
-   - Match percentage progress bar.
-   - Textual rationale highlighting specific matching attributes.
-   - Action buttons to **Preview** in full resolution or **Download** the photo.
+### 4.3 Feature 3: Search Feedback & Result Refinement
+- **Objective**: Let guests steer and refine search results when initial ranking is ambiguous.
+- **Requirements**:
+  - **Feedback Controls**:
+    - Inline thumbs-up (👍 Relevant) and thumbs-down (👎 Irrelevant) buttons on each result card.
+    - Visual indicators showing applied feedback status.
+  - **Result Refinement Mechanism**:
+    - **Client-Side Attribute Weighting**: Dynamically boosts photos sharing attributes with thumbs-up items and demotes photos sharing negative attributes with thumbs-down items.
+    - **Active Search Refinement**: A "Refine Search with Feedback" action that factors guest ratings into the current query context.
+  - **Transparency & Trust**:
+    - Explicit disclaimer: *"Feedback adjusts weighting for this search session only. It does not retrain or alter the underlying AI model."*
 
-### Step 4: Full Album Exploration & Lightbox Inspection
-1. At any point, the user can switch to the **Full Album** tab to browse the entire collection in an unranked visual grid.
-2. Clicking any photo opens an interactive **Lightbox** modal for close inspection and one-click downloading.
+### 4.4 Feature 4: Find Me — On-Device Facial Recognition
+- **Objective**: Allow guests to locate photos of themselves across the wedding album using on-device biometric face geometry matching.
+- **Privacy & Consent Guarantees**:
+  - **100% On-Device Processing**: Runs client-side using `@vladmandic/face-api` (TensorFlow.js) and local static models. No face images or biometric descriptors are ever transmitted to Gemini or external APIs.
+  - **Explicit Opt-In Consent**: Requires explicit user consent before activating the feature or downloading model weights.
+  - **Multi-Person Disambiguation**: If a reference selfie has multiple people, prompts the user to select their face.
+  - **Group Photo Matching**: Detects and extracts separate embeddings for all faces in group wedding photos, matching photos where any face matches the reference.
+  - **Estimated Similarity Scoring**: Displays estimated facial match percentages, calibrated distance metrics, and confidence badges (High, Moderate, Possible).
+  - **Data Erasure**: Includes a "Clear Face Data" button to instantly purge all stored facial embeddings and reference templates.
+
+---
+
+## 5. Non-Functional Requirements & Privacy Constraints
+- **Independent Biometric Architecture**: Facial recognition is completely decoupled from Gemini visual-attribute search.
+- **Local Storage First**: Photos remain stored in the user's browser; facial embeddings are stored locally in IndexedDB.
+- **Zero Paid Services & Quota Preservation**: Facial matching uses 0 Gemini API calls and introduces no third-party paid services.
+

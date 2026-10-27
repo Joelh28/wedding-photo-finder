@@ -134,6 +134,9 @@ async function startServer() {
     });
   });
 
+  // Serve local face-api model weights statically
+  app.use("/models", express.static(path.resolve(__dirname, "public/models")));
+
   // Vite development middleware or static production serving
   if (process.env.NODE_ENV === "production") {
     const distPath = path.resolve(__dirname, "dist");

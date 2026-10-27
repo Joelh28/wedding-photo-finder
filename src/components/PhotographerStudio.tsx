@@ -91,8 +91,9 @@ export function PhotographerStudio({
             {photos.map((p) => (
               <div className="thumb" key={p.id}>
                 <img src={p.dataUrl} alt={p.name} onClick={() => onPreview(p)} />
-                <span className={`badge${p.attributes ? "" : " pending"}`}>
-                  {p.attributes ? "AI ✓" : "not analyzed"}
+                <span className={`badge${p.attributes || p.faces ? "" : " pending"}`}>
+                  {p.attributes ? "AI ✓" : "pending"}
+                  {p.faces && p.faces.length > 0 ? ` · 👤 ${p.faces.length}` : ""}
                 </span>
                 <button className="del" title="Remove" onClick={() => onDelete(p.id)}>
                   ×

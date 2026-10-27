@@ -1,4 +1,4 @@
-import type { PhotoAttributes, StoredPhoto } from "../types";
+import type { DetectedFace, PhotoAttributes, StoredPhoto } from "../types";
 
 /**
  * Tiny IndexedDB wrapper — photos live only in the browser (no database,
@@ -74,4 +74,31 @@ export async function setAttributes(
   const existing = await tx<StoredPhoto | undefined>("readonly", (s) => s.get(id));
   if (!existing) return;
   await putPhoto({ ...existing, attributes });
+}
+
+/** Cache detected faces for a photo so facial descriptors don't need recomputing */
+export async function setPhotoFaces(
+  id: string,
+  faces: DetectedFace[],
+): Promise<void> {
+  const existing = await tx<StoredPhoto | undefined>("readonly", (s) => s.get(id));
+  if (!existing) return;
+  await putPhoto({ ...existing, faces });
+}
+
+/** Clear all stored face embeddings across the album without deleting any photos */
+export async function clearAllFaceData(): Promise<void> {
+  const all = await getAllPhotos();
+  const db = await open();
+  await new Promise<void>((resolve, reject) => {
+    const t = db.transaction(STORE, "readwrite");
+    const store = t.objectStore(STORE);
+    all.forEach((p) => {
+      const { faces, ...rest } = p;
+      store.put(rest as StoredPhoto);
+    });
+    t.oncomplete = () => resolve();
+    t.onerror = () => reject(t.error);
+  });
+  db.close();
 }
