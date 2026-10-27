@@ -1,3 +1,4 @@
+import JSZip from "jszip";
 import type { StoredPhoto } from "../types";
 
 export function fileToDataUrl(file: File): Promise<string> {
@@ -108,4 +109,78 @@ export function downloadDataUrl(dataUrl: string, filename: string): void {
   document.body.appendChild(a);
   a.click();
   a.remove();
+}
+
+/** Convert a base64 data URL into a binary Blob */
+export function dataUrlToBlob(dataUrl: string): Blob {
+  const parts = dataUrl.split(",");
+  const mime = parts[0]?.match(/:(.*?);/)?.[1] || "image/jpeg";
+  const binary = atob(parts[1] || "");
+  const len = binary.length;
+  const buffer = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    buffer[i] = binary.charCodeAt(i);
+  }
+  return new Blob([buffer], { type: mime });
+}
+
+/**
+ * Downloads multiple original-resolution photos packaged as a single ZIP file.
+ * - Runs 100% in the client browser with JSZip.
+ * - Preserves original image quality and file names.
+ * - Deduplicates names if necessary so no files are overwritten.
+ */
+export async function downloadPhotosAsZip(
+  photos: StoredPhoto[],
+  zipFilename = "wedding-photo-collection.zip",
+  onProgress?: (current: number, total: number) => void,
+): Promise<void> {
+  if (photos.length === 0) return;
+
+  const zip = new JSZip();
+  const nameCounts = new Map<string, number>();
+
+  for (let i = 0; i < photos.length; i++) {
+    const photo = photos[i];
+    if (onProgress) {
+      onProgress(i + 1, photos.length);
+    }
+
+    let fileName = photo.name || `wedding-photo-${i + 1}.jpg`;
+    // Ensure filename extension exists
+    if (!/\.[a-zA-Z0-9]+$/.test(fileName)) {
+      const ext = photo.type?.includes("png") ? ".png" : photo.type?.includes("webp") ? ".webp" : ".jpg";
+      fileName += ext;
+    }
+
+    // Deduplicate filename if multiple photos have identical names
+    const count = nameCounts.get(fileName) || 0;
+    nameCounts.set(fileName, count + 1);
+    if (count > 0) {
+      const dotIndex = fileName.lastIndexOf(".");
+      if (dotIndex > 0) {
+        fileName = `${fileName.slice(0, dotIndex)} (${count})${fileName.slice(dotIndex)}`;
+      } else {
+        fileName = `${fileName} (${count})`;
+      }
+    }
+
+    const blob = dataUrlToBlob(photo.dataUrl);
+    zip.file(fileName, blob);
+  }
+
+  const zipBlob = await zip.generateAsync({
+    type: "blob",
+    compression: "DEFLATE",
+    compressionOptions: { level: 6 },
+  });
+
+  const url = URL.createObjectURL(zipBlob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = zipFilename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 }

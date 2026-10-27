@@ -26,6 +26,8 @@ interface SelfieFaceItem {
 export function GuestSearch({
   photos,
   aiConfigured,
+  collectionIds,
+  onToggleCollection,
   onAttributesComputed,
   onFacesComputed,
   onClearFaces,
@@ -33,6 +35,8 @@ export function GuestSearch({
 }: {
   photos: StoredPhoto[];
   aiConfigured: boolean;
+  collectionIds?: Set<string>;
+  onToggleCollection?: (photo: StoredPhoto) => void;
   onAttributesComputed: (id: string, attributes: PhotoAttributes) => void;
   onFacesComputed?: (id: string, faces: DetectedFace[]) => void;
   onClearFaces?: () => void;
@@ -779,6 +783,15 @@ export function GuestSearch({
                   </div>
                   <div className="rationale">{r.rationale || (mode === "face" ? "Matched facial geometry." : "Matched on visual attributes.")}</div>
                   <div className="actions">
+                    {onToggleCollection && (
+                      <button
+                        type="button"
+                        className={`btn small ${collectionIds?.has(r.photo.id) ? "gold" : "ghost"}`}
+                        onClick={() => onToggleCollection(r.photo)}
+                      >
+                        {collectionIds?.has(r.photo.id) ? "✓ In Collection" : "🎁 Save to Collection"}
+                      </button>
+                    )}
                     <button className="btn small" onClick={() => onPreview(r.photo)}>
                       Preview
                     </button>

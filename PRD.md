@@ -48,20 +48,15 @@
   - **Show All Results Toggle**: A quick toggle or button ("Show all X results") allowing users to view the complete catalog including low and 0% matches.
   - **Result Counter**: Displays live counts (e.g., *"Showing 8 of 24 photos (≥ 30% match)"*).
 
-### 4.2 Feature 2: Favorites & Batch Download
-- **Objective**: Enable guests to curate their personal collection and download multiple photos in a single action.
-- **Requirements**:
-  - **Photo Favoriting**:
-    - Heart icon toggle (❤️ / 🤍) on photo thumbnails, search result cards, and the lightbox modal.
-    - Persistent favorites state stored in IndexedDB.
-    - Dedicated "Favorites" filter/view to inspect all favorited photos across the album.
-  - **Multi-Photo Selection**:
-    - Checkbox selection on search result cards and album grid.
-    - "Select All Filtered" and "Deselect All" batch controls.
-    - Floating action bar showing count of selected items (e.g., *"4 photos selected"*).
-  - **Batch ZIP Download**:
-    - One-click "Download Selected as ZIP" button.
-    - Packages original full-resolution images from IndexedDB into a single `.zip` archive named `wedding-photos-selection.zip` client-side without backend upload.
+### 4.2 Feature 2: My Photo Collection & Batch ZIP Download (Implemented)
+- **Objective**: Allow guests to curate their personal collection of photos discovered through text search, reference image search, facial recognition, or the full album, and download them together in a single ZIP archive.
+- **Key Capabilities**:
+  - **Save to Collection Buttons**: Available across all views (search result cards, full album grid, photographer studio, and the lightbox modal).
+  - **Independent & Deduplicated**: Prevents duplicates by photo ID and persists collection IDs locally in browser storage across page refreshes and multiple search queries.
+  - **Live Counter Badge**: Navigation tab displays real-time count: `🎁 My Collection (X)`.
+  - **Batch ZIP Download**: Uses client-side `JSZip` to package full-resolution originals into `wedding-photos-collection-X.zip` in-browser with zero server uploads or fees.
+  - **Automatic Pruning**: Automatically removes items from the collection if they are deleted from the album.
+  - **Collection Management**: Easily remove individual photos or clear the entire collection with confirmation.
 
 ### 4.3 Feature 3: Search Feedback & Result Refinement
 - **Objective**: Let guests steer and refine search results when initial ranking is ambiguous.

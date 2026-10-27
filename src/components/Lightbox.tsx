@@ -4,9 +4,13 @@ import { downloadDataUrl } from "../lib/files";
 
 export function Lightbox({
   photo,
+  isInCollection,
+  onToggleCollection,
   onClose,
 }: {
   photo: StoredPhoto | null;
+  isInCollection?: boolean;
+  onToggleCollection?: (photo: StoredPhoto) => void;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -25,8 +29,18 @@ export function Lightbox({
       </button>
       <img src={photo.dataUrl} alt={photo.name} onClick={(e) => e.stopPropagation()} />
       <div className="lb-actions" onClick={(e) => e.stopPropagation()}>
+        {onToggleCollection && (
+          <button
+            type="button"
+            className={`btn ${isInCollection ? "gold" : "ghost"}`}
+            style={{ color: "#fff", borderColor: isInCollection ? "var(--gold)" : "rgba(255,255,255,0.5)" }}
+            onClick={() => onToggleCollection(photo)}
+          >
+            {isInCollection ? "✓ In Collection" : "🎁 Save to Collection"}
+          </button>
+        )}
         <button className="btn sage" onClick={() => downloadDataUrl(photo.dataUrl, photo.name)}>
-          ⬇ Download
+          ⬇ Download Original
         </button>
       </div>
     </div>

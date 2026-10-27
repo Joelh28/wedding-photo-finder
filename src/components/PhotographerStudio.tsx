@@ -4,12 +4,16 @@ import { filesToStoredPhotos } from "../lib/files";
 
 export function PhotographerStudio({
   photos,
+  collectionIds,
+  onToggleCollection,
   onAdd,
   onDelete,
   onClear,
   onPreview,
 }: {
   photos: StoredPhoto[];
+  collectionIds?: Set<string>;
+  onToggleCollection?: (photo: StoredPhoto) => void;
   onAdd: (photos: StoredPhoto[]) => Promise<void>;
   onDelete: (id: string) => void;
   onClear: () => void;
@@ -88,19 +92,36 @@ export function PhotographerStudio({
       {photos.length > 0 && (
         <>
           <div className="grid">
-            {photos.map((p) => (
-              <div className="thumb" key={p.id}>
-                <img src={p.dataUrl} alt={p.name} onClick={() => onPreview(p)} />
-                <span className={`badge${p.attributes || p.faces ? "" : " pending"}`}>
-                  {p.attributes ? "AI ✓" : "pending"}
-                  {p.faces && p.faces.length > 0 ? ` · 👤 ${p.faces.length}` : ""}
-                </span>
-                <button className="del" title="Remove" onClick={() => onDelete(p.id)}>
-                  ×
-                </button>
-                <div className="meta">{p.name}</div>
-              </div>
-            ))}
+            {photos.map((p) => {
+              const isSaved = collectionIds?.has(p.id) ?? false;
+              return (
+                <div className="thumb" key={p.id}>
+                  <img src={p.dataUrl} alt={p.name} onClick={() => onPreview(p)} />
+                  <span className={`badge${p.attributes || p.faces ? "" : " pending"}`}>
+                    {p.attributes ? "AI ✓" : "pending"}
+                    {p.faces && p.faces.length > 0 ? ` · 👤 ${p.faces.length}` : ""}
+                  </span>
+                  {onToggleCollection && (
+                    <button
+                      type="button"
+                      className={`thumb-collection-btn${isSaved ? " active" : ""}`}
+                      title={isSaved ? "Remove from Collection" : "Save to Collection"}
+                      style={{ left: "auto", right: 36 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleCollection(p);
+                      }}
+                    >
+                      {isSaved ? "✓" : "🎁"}
+                    </button>
+                  )}
+                  <button className="del" title="Remove" onClick={() => onDelete(p.id)}>
+                    ×
+                  </button>
+                  <div className="meta">{p.name}</div>
+                </div>
+              );
+            })}
           </div>
           <div style={{ marginTop: 16 }}>
             <button className="btn ghost small" onClick={onClear}>

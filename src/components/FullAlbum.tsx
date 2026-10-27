@@ -3,9 +3,13 @@ import { downloadDataUrl } from "../lib/files";
 
 export function FullAlbum({
   photos,
+  collectionIds,
+  onToggleCollection,
   onPreview,
 }: {
   photos: StoredPhoto[];
+  collectionIds?: Set<string>;
+  onToggleCollection?: (photo: StoredPhoto) => void;
   onPreview: (photo: StoredPhoto) => void;
 }) {
   return (
@@ -27,20 +31,39 @@ export function FullAlbum({
         </div>
       ) : (
         <div className="grid">
-          {photos.map((p) => (
-            <div className="thumb" key={p.id}>
-              <img src={p.dataUrl} alt={p.name} onClick={() => onPreview(p)} />
-              <button
-                className="del"
-                title="Download"
-                style={{ background: "rgba(138,154,133,.9)" }}
-                onClick={() => downloadDataUrl(p.dataUrl, p.name)}
-              >
-                ⬇
-              </button>
-              <div className="meta">{p.name}</div>
-            </div>
-          ))}
+          {photos.map((p) => {
+            const isSaved = collectionIds?.has(p.id) ?? false;
+            return (
+              <div className="thumb" key={p.id}>
+                <img src={p.dataUrl} alt={p.name} onClick={() => onPreview(p)} />
+                {onToggleCollection && (
+                  <button
+                    type="button"
+                    className={`thumb-collection-btn${isSaved ? " active" : ""}`}
+                    title={isSaved ? "Remove from Collection" : "Save to Collection"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleCollection(p);
+                    }}
+                  >
+                    {isSaved ? "✓ Saved" : "+ Collection"}
+                  </button>
+                )}
+                <button
+                  className="del"
+                  title="Download Photo"
+                  style={{ background: "rgba(138,154,133,.9)" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    downloadDataUrl(p.dataUrl, p.name);
+                  }}
+                >
+                  ⬇
+                </button>
+                <div className="meta">{p.name}</div>
+              </div>
+            );
+          })}
         </div>
       )}
     </section>

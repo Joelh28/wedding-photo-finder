@@ -366,3 +366,95 @@ textarea { min-height: 84px; resize: vertical; }
   color: #557250;
 }
 
+/* My Collection Styling */
+.btn.gold {
+  background: var(--gold);
+  color: #fff;
+}
+.btn.gold:hover {
+  background: #b89355;
+}
+
+.tab-badge {
+  background: var(--gold);
+  color: #fff;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 6px;
+  display: inline-block;
+  line-height: 1.2;
+}
+.tab.active .tab-badge {
+  background: #fff;
+  color: var(--rose-dark);
+}
+
+.collection-actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 18px;
+  background: #fdfaf8;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+}
+.collection-summary {
+  font-size: 14px;
+  color: var(--ink);
+}
+.collection-summary strong {
+  color: var(--rose-dark);
+  font-size: 16px;
+}
+
+.thumb .collection-tag {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: var(--gold);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 10px;
+  padding: 2px 7px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+
+.thumb-collection-btn {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  border: none;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 2;
+}
+.thumb-collection-btn:hover {
+  background: #fff;
+  color: var(--gold);
+  transform: scale(1.04);
+}
+.thumb-collection-btn.active {
+  background: var(--gold);
+  color: #fff;
+}
+
+
